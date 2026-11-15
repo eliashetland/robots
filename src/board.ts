@@ -6,6 +6,7 @@ import type { ITarget } from "./types/ITarget";
 import type { IWall } from "./types/IWall";
 
 type Direction = 'up' | 'right' | 'down' | 'left';
+type RobotMove = { robotId: number; position: IPosition };
 
 function loadImage(image: HTMLImageElement, src: string): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -86,6 +87,7 @@ export class Board {
     imgLoaded: Promise<void>;
     #selectedRobotId: number | null = null;
     #currentIconId: number | null = null;
+    #moveHistory: RobotMove[] = [];
 
     constructor(ctx: CanvasRenderingContext2D, board: IBoard) {
         this.ctx = ctx;
@@ -115,7 +117,31 @@ export class Board {
         this.#drawBoard();
     }
 
+    resetMoveHistory() {
+        this.#moveHistory = [];
+        this.#currentIconId = null;
+        this.#selectedRobotId = null;
+    }
+
+    get movesThisRound(): number {
+        return this.#moveHistory.length;
+    }
+
+    undoLastMove(): boolean {
+        const move = this.#moveHistory.pop();
+        if (!move) {
+            return false;
+        }
+        this.robotPositions[move.robotId] = { ...move.position };
+        this.#selectedRobotId = null;
+        this.#drawBoard();
+        return true;
+    }
+
     handleClick(x: number, y: number) {
+        if (this.#currentIconId === null) {
+            return;
+        }
         const tileX = Math.floor(x / ART_SIZE);
         const tileY = Math.floor(y / ART_SIZE);
         const robot = this.#getRobotAt(tileX, tileY);
@@ -146,6 +172,9 @@ export class Board {
     }
 
     handleDrag(startX: number, startY: number, endX: number, endY: number): boolean {
+        if (this.#currentIconId === null) {
+            return false;
+        }
         const robot = this.#getRobotAt(
             Math.floor(startX / ART_SIZE),
             Math.floor(startY / ART_SIZE),
@@ -366,8 +395,15 @@ export class Board {
     }
 
     #moveSelectedRobot(direction: Direction) {
-        const position = this.robotPositions[this.#selectedRobotId!];
+        const robotId = this.#selectedRobotId!;
+        const position = this.robotPositions[robotId];
         const nextPosition = this.findNextCell(position, direction);
+        if (nextPosition.x === position.x && nextPosition.y === position.y) {
+            this.#selectedRobotId = null;
+            this.#drawBoard();
+            return;
+        }
+        this.#moveHistory.push({ robotId, position: { ...position } });
         position.x = nextPosition.x;
         position.y = nextPosition.y;
         this.#selectedRobotId = null;

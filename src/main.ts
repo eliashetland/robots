@@ -33,6 +33,7 @@ canvas.addEventListener('pointerup', event => {
     const end = getCanvasPoint(event);
     dragged = board.handleDrag(dragStart.x, dragStart.y, end.x, end.y);
     dragStart = null;
+    updateMoveCount();
 });
 
 canvas.addEventListener('pointercancel', () => {
@@ -46,13 +47,26 @@ canvas.addEventListener('click', event => {
     }
     const point = getCanvasPoint(event);
     board.handleClick(point.x, point.y);
+    updateMoveCount();
 });
 
 const startButton = document.getElementById('start') as HTMLButtonElement;
 const rounds = document.getElementById('rounds') as HTMLDivElement;
+const moves = document.getElementById('moves') as HTMLDivElement;
+const undoButton = document.getElementById('undo') as HTMLButtonElement;
+const updateMoveCount = () => {
+    moves.textContent = `Robots moved: ${board.movesThisRound}`;
+};
+
 startButton.addEventListener('click', () => {
     game.nextTurn().then(roundsleft => {
         rounds.textContent = `Rounds left: ${roundsleft}`;
+        updateMoveCount();
     });
 
+});
+
+undoButton.addEventListener('click', () => {
+    board.undoLastMove();
+    updateMoveCount();
 });

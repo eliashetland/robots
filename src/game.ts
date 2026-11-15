@@ -14,6 +14,7 @@ export class Game {
     }
 
     async #resetBoard() {
+        this.board.resetMoveHistory();
         await this.board.newBoard();
         this.items = Array.from({ length: 17 }, (_, i) => i + 1);
         this.items = this.items.sort(() => Math.random() - 0.5); // Shuffle the items
