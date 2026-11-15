@@ -1,8 +1,11 @@
 import { ART_SIZE, EDGE_WIDTH, GRID_SIZE, WALL_WIDTH } from "./constants";
 import type { IBoard } from "./types/IBoard";
 import type { IIconAsset } from "./types/IIcon";
+import type { IPosition } from "./types/IPosition";
 import type { ITarget } from "./types/ITarget";
 import type { IWall } from "./types/IWall";
+
+type Direction = 'up' | 'right' | 'down' | 'left';
 
 function loadImage(image: HTMLImageElement, src: string): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -81,6 +84,8 @@ export class Board {
     };
     targets: ITarget[];
     imgLoaded: Promise<void>;
+    #selectedRobotId: number | null = null;
+    #currentIconId: number | null = null;
 
     constructor(ctx: CanvasRenderingContext2D, board: IBoard) {
         this.ctx = ctx;
@@ -102,20 +107,63 @@ export class Board {
 
     async newBoard() {
         await this.imgLoaded;
+        this.#drawBoard();
+    }
+
+    showNextIcon(iconId: number) {
+        this.#currentIconId = iconId;
+        this.#drawBoard();
+    }
+
+    handleClick(x: number, y: number) {
+        const tileX = Math.floor(x / ART_SIZE);
+        const tileY = Math.floor(y / ART_SIZE);
+        const robot = this.robots.find(robot => {
+            const position = this.robotPositions[robot.id];
+            return position !== undefined && position.x === tileX && position.y === tileY;
+        });
+
+        if (robot && robot.id !== this.#selectedRobotId) {
+            this.#selectedRobotId = robot.id;
+            this.#drawBoard();
+            return;
+        }
+
+        if (this.#selectedRobotId === null) {
+            return;
+        }
+
+        const position = this.robotPositions[this.#selectedRobotId];
+        if (!position || tileX !== position.x || tileY !== position.y) {
+            this.#selectedRobotId = null;
+            this.#drawBoard();
+            return;
+        }
+
+        const direction = this.#getDirectionFromClick(x, y);
+        if (direction) {
+            this.#moveSelectedRobot(direction);
+        }
+
+    }
+    #drawBoard() {
         this.#drawTiles();
         this.#drawEdges();
         this.#drawWalls();
         this.#drawTargets();
         this.#drawRobots();
+        this.#drawCurrentIcon();
+        this.#drawRobotArrows();
     }
 
-    showNextIcon(iconId: number) {
-        const target = this.#getIconAssetById(iconId);
-        //draw icon in center of board
+    #drawCurrentIcon() {
+        if (this.#currentIconId === null) {
+            return;
+        }
+        const target = this.#getIconAssetById(this.#currentIconId);
         this.ctx.fillStyle = 'grey';
         this.ctx.fillRect(7.5 * ART_SIZE, 7.5 * ART_SIZE, ART_SIZE, ART_SIZE);
         this.ctx.drawImage(target.image, 7.5 * ART_SIZE, 7.5 * ART_SIZE, ART_SIZE, ART_SIZE);
-
     }
     #drawTiles() {
         this.ctx.fillRect(0, 0, GRID_SIZE * ART_SIZE, GRID_SIZE * ART_SIZE);
@@ -184,5 +232,98 @@ export class Board {
 
             this.ctx.drawImage(robot.image, x, y, ART_SIZE, ART_SIZE);
         }
+    }
+
+    #drawRobotArrows() {
+        if (this.#selectedRobotId === null) {
+            return;
+        }
+        const position = this.robotPositions[this.#selectedRobotId];
+        if (!position) {
+            return;
+        }
+
+        const centerX = (position.x + 0.5) * ART_SIZE;
+        const centerY = (position.y + 0.5) * ART_SIZE;
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.strokeStyle = 'rgba(14, 38, 58, 0.9)';
+        this.ctx.lineWidth = 2;
+        for (const direction of ['up', 'right', 'down', 'left'] as Direction[]) {
+            this.#drawArrow(centerX, centerY, direction);
+        }
+    }
+
+    #drawArrow(centerX: number, centerY: number, direction: Direction) {
+        const points: Record<Direction, [number, number][]> = {
+            up: [[centerX, centerY - 25], [centerX - 10, centerY - 12], [centerX + 10, centerY - 12]],
+            right: [[centerX + 25, centerY], [centerX + 12, centerY - 10], [centerX + 12, centerY + 10]],
+            down: [[centerX, centerY + 25], [centerX - 10, centerY + 12], [centerX + 10, centerY + 12]],
+            left: [[centerX - 25, centerY], [centerX - 12, centerY - 10], [centerX - 12, centerY + 10]],
+        };
+        this.ctx.beginPath();
+        points[direction].forEach(([x, y], index) => {
+            if (index === 0) this.ctx.moveTo(x, y);
+            else this.ctx.lineTo(x, y);
+        });
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+    }
+
+    #getDirectionFromClick(x: number, y: number): Direction | null {
+        const position = this.robotPositions[this.#selectedRobotId!];
+        const offsetX = x - (position.x + 0.5) * ART_SIZE;
+        const offsetY = y - (position.y + 0.5) * ART_SIZE;
+        if (Math.abs(offsetX) <= Math.abs(offsetY) && offsetY < -10) return 'up';
+        if (Math.abs(offsetY) <= Math.abs(offsetX) && offsetX > 10) return 'right';
+        if (Math.abs(offsetX) <= Math.abs(offsetY) && offsetY > 10) return 'down';
+        if (Math.abs(offsetY) <= Math.abs(offsetX) && offsetX < -10) return 'left';
+        return null;
+    }
+
+    findNextCell(position: IPosition, direction: Direction): IPosition {
+        const offsets: Record<Direction, IPosition> = {
+            up: { x: 0, y: -1 },
+            right: { x: 1, y: 0 },
+            down: { x: 0, y: 1 },
+            left: { x: -1, y: 0 },
+        };
+        let nextPosition = { ...position };
+        const offset = offsets[direction];
+
+        while (true) {
+            const candidate = {
+                x: nextPosition.x + offset.x,
+                y: nextPosition.y + offset.y,
+            };
+            if (candidate.x < 0 || candidate.x >= GRID_SIZE ||
+                candidate.y < 0 || candidate.y >= GRID_SIZE ||
+                this.#hasWallBetween(nextPosition, candidate) ||
+                this.robots.some(robot => {
+                    const robotPosition = this.robotPositions[robot.id];
+                    return robotPosition?.x === candidate.x && robotPosition?.y === candidate.y;
+                })) {
+                return nextPosition;
+            }
+            nextPosition = candidate;
+        }
+    }
+
+    #hasWallBetween(from: IPosition, to: IPosition): boolean {
+        return this.walls.some(wall =>
+            (wall.from.x === from.x && wall.from.y === from.y &&
+                wall.to.x === to.x && wall.to.y === to.y) ||
+            (wall.from.x === to.x && wall.from.y === to.y &&
+                wall.to.x === from.x && wall.to.y === from.y),
+        );
+    }
+
+    #moveSelectedRobot(direction: Direction) {
+        const position = this.robotPositions[this.#selectedRobotId!];
+        const nextPosition = this.findNextCell(position, direction);
+        position.x = nextPosition.x;
+        position.y = nextPosition.y;
+        this.#selectedRobotId = null;
+        this.#drawBoard();
     }
 }
