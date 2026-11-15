@@ -7,6 +7,13 @@ import type { IWall } from "./types/IWall";
 
 type Direction = 'up' | 'right' | 'down' | 'left';
 type RobotMove = { robotId: number; position: IPosition };
+type RobotAnimation = {
+    robotId: number;
+    from: IPosition;
+    to: IPosition;
+    startedAt: number;
+    duration: number;
+};
 
 function loadImage(image: HTMLImageElement, src: string): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -92,6 +99,8 @@ export class Board {
     #roundComplete = false;
     #showTrails = false;
     #robotPaths: { [key: number]: IPosition[] } = {};
+    #robotAnimation: RobotAnimation | null = null;
+    onRoundComplete: (() => void) | null = null;
 
     constructor(ctx: CanvasRenderingContext2D, board: IBoard) {
         this.ctx = ctx;
@@ -192,6 +201,7 @@ export class Board {
         this.#currentIconId = null;
         this.#selectedRobotId = null;
         this.#roundComplete = false;
+        this.#robotAnimation = null;
     }
 
     get movesThisRound(): number {
@@ -203,7 +213,9 @@ export class Board {
     }
 
     retryRound(): boolean {
-        if (this.#currentIconId === null || Object.keys(this.#roundStartPositions).length === 0) {
+        if (this.#robotAnimation ||
+            this.#currentIconId === null ||
+            Object.keys(this.#roundStartPositions).length === 0) {
             return false;
         }
         this.robotPositions = Object.fromEntries(
@@ -220,7 +232,7 @@ export class Board {
     }
 
     undoLastMove(): boolean {
-        if (this.#roundComplete) {
+        if (this.#roundComplete || this.#robotAnimation) {
             return false;
         }
         const move = this.#moveHistory.pop();
@@ -238,7 +250,7 @@ export class Board {
     }
 
     handleClick(x: number, y: number) {
-        if (this.#currentIconId === null || this.#roundComplete) {
+        if (this.#currentIconId === null || this.#roundComplete || this.#robotAnimation) {
             return;
         }
         const tileX = Math.floor(x / ART_SIZE);
@@ -271,7 +283,7 @@ export class Board {
     }
 
     handleHover(x: number, y: number) {
-        if (this.#currentIconId === null || this.#roundComplete) {
+        if (this.#currentIconId === null || this.#roundComplete || this.#robotAnimation) {
             return;
         }
         const tileX = Math.floor(x / ART_SIZE);
@@ -305,7 +317,7 @@ export class Board {
     }
 
     handleDrag(startX: number, startY: number, endX: number, endY: number): boolean {
-        if (this.#currentIconId === null || this.#roundComplete) {
+        if (this.#currentIconId === null || this.#roundComplete || this.#robotAnimation) {
             return false;
         }
         const robot = this.#getRobotAt(
@@ -419,8 +431,9 @@ export class Board {
                 console.error(`Robot position not found for id: ${robot.id}`);
                 continue;
             }
-            const x = position.x * ART_SIZE;
-            const y = position.y * ART_SIZE;
+            const animatedPosition = this.#getAnimatedPosition(robot.id, position);
+            const x = animatedPosition.x * ART_SIZE;
+            const y = animatedPosition.y * ART_SIZE;
 
             this.ctx.drawImage(robot.image, x, y, ART_SIZE, ART_SIZE);
         }
@@ -459,6 +472,46 @@ export class Board {
             black: '#536271',
         };
         return colors[color] ?? '#d9e3ea';
+    }
+
+    #getAnimatedPosition(robotId: number, position: IPosition): IPosition {
+        const animation = this.#robotAnimation;
+        if (!animation || animation.robotId !== robotId) {
+            return position;
+        }
+        const progress = Math.min(
+            (performance.now() - animation.startedAt) / animation.duration,
+            1,
+        );
+        const easedProgress = progress < 0.5
+            ? 2 * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        return {
+            x: animation.from.x + (animation.to.x - animation.from.x) * easedProgress,
+            y: animation.from.y + (animation.to.y - animation.from.y) * easedProgress,
+        };
+    }
+
+    #animateRobotMove(timestamp: number) {
+        const animation = this.#robotAnimation;
+        if (!animation) {
+            return;
+        }
+        const progress = Math.min(
+            (timestamp - animation.startedAt) / animation.duration,
+            1,
+        );
+        this.#drawBoard();
+        if (progress < 1) {
+            requestAnimationFrame(nextTimestamp => this.#animateRobotMove(nextTimestamp));
+            return;
+        }
+        this.#robotAnimation = null;
+        if (this.#isCorrectRobotAtTarget(animation.robotId)) {
+            this.#roundComplete = true;
+            this.onRoundComplete?.();
+        }
+        this.#drawBoard();
     }
 
     #drawRobotArrows() {
@@ -577,14 +630,20 @@ export class Board {
             return;
         }
         this.#moveHistory.push({ robotId, position: { ...position } });
+        const from = { ...position };
         position.x = nextPosition.x;
         position.y = nextPosition.y;
         this.#robotPaths[robotId]?.push({ ...nextPosition });
-        if (this.#isCorrectRobotAtTarget(robotId)) {
-            this.#roundComplete = true;
-        }
+        const distance = Math.abs(nextPosition.x - from.x) + Math.abs(nextPosition.y - from.y);
+        this.#robotAnimation = {
+            robotId,
+            from,
+            to: { ...nextPosition },
+            startedAt: performance.now(),
+            duration: Math.min(450, Math.max(100, distance * 55)),
+        };
         this.#selectedRobotId = null;
-        this.#drawBoard();
+        requestAnimationFrame(timestamp => this.#animateRobotMove(timestamp));
     }
 
     #isCorrectRobotAtTarget(robotId: number): boolean {

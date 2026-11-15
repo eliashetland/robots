@@ -115,6 +115,8 @@ const updateMoveCount = () => {
         : roundsRemaining === 0 ? 'Final round' : '';
 };
 
+board.onRoundComplete = updateMoveCount;
+
 startButton.addEventListener('click', () => {
     startTimer();
     game.nextTurn().then(roundsleft => {
