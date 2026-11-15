@@ -53,10 +53,33 @@ canvas.addEventListener('click', event => {
 const startButton = document.getElementById('start') as HTMLButtonElement;
 const rounds = document.getElementById('rounds') as HTMLDivElement;
 const moveCount = document.getElementById('move-count') as HTMLElement;
+const roundTimer = document.getElementById('round-timer') as HTMLElement;
 const message = document.getElementById('message') as HTMLDivElement;
 const undoButton = document.getElementById('undo') as HTMLButtonElement;
 const retryButton = document.getElementById('retry') as HTMLButtonElement;
 let roundsRemaining = 17;
+let roundStartedAt: number | null = null;
+let timerId: number | null = null;
+
+const updateTimer = () => {
+    if (roundStartedAt === null) {
+        return;
+    }
+    const elapsedSeconds = Math.floor((Date.now() - roundStartedAt) / 1000);
+    const minutes = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0');
+    const seconds = (elapsedSeconds % 60).toString().padStart(2, '0');
+    roundTimer.textContent = `Time ${minutes}:${seconds}`;
+};
+
+const startTimer = () => {
+    if (timerId !== null) {
+        window.clearInterval(timerId);
+    }
+    roundStartedAt = Date.now();
+    roundTimer.textContent = 'Time 00:00';
+    timerId = window.setInterval(updateTimer, 1000);
+};
+
 const updateRoundDeck = (remaining: number) => {
     rounds.replaceChildren();
     rounds.setAttribute('aria-label', `${remaining} rounds remaining`);
@@ -72,12 +95,18 @@ const updateRoundDeck = (remaining: number) => {
 };
 const updateMoveCount = () => {
     moveCount.textContent = `${board.movesThisRound}`;
+    if (board.roundComplete && timerId !== null) {
+        window.clearInterval(timerId);
+        timerId = null;
+        updateTimer();
+    }
     message.textContent = board.roundComplete
         ? roundsRemaining === 0 ? 'Game finished!' : 'Success!'
         : roundsRemaining === 0 ? 'Final round' : '';
 };
 
 startButton.addEventListener('click', () => {
+    startTimer();
     game.nextTurn().then(roundsleft => {
         roundsRemaining = roundsleft;
         updateRoundDeck(roundsRemaining);
@@ -93,7 +122,9 @@ undoButton.addEventListener('click', () => {
 });
 
 retryButton.addEventListener('click', () => {
-    board.retryRound();
+    if (board.retryRound()) {
+        startTimer();
+    }
     updateMoveCount();
 });
 
