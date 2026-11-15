@@ -44,6 +44,14 @@ export class Board {
         { image: new Image(ART_SIZE, ART_SIZE), type: 'hole', color: 'dark', id: 17 },
     ];
 
+    robots: IIconAsset[] = [
+        { image: new Image(ART_SIZE, ART_SIZE), type: 'robot', color: 'red', id: 18 },
+        { image: new Image(ART_SIZE, ART_SIZE), type: 'robot', color: 'blue', id: 19 },
+        { image: new Image(ART_SIZE, ART_SIZE), type: 'robot', color: 'yellow', id: 20 },
+        { image: new Image(ART_SIZE, ART_SIZE), type: 'robot', color: 'green', id: 21 },
+        { image: new Image(ART_SIZE, ART_SIZE), type: 'robot', color: 'black', id: 22 },
+    ];
+
     #getIconAsset(type: string, color: string): IIconAsset {
         return this.iconAssets.find(icon => icon.type === type && icon.color === color) as IIconAsset;
     }
@@ -64,6 +72,13 @@ export class Board {
         { from: { x: 8, y: 8 }, to: { x: 8, y: 9 } },
     ];
 
+    robotPositions: { [key: number]: { x: number; y: number } } = {
+        18: { x: 0, y: 0 }, // Red robot
+        19: { x: 15, y: 0 }, // Blue robot
+        20: { x: 0, y: 15 }, // Yellow robot
+        21: { x: 15, y: 15 }, // Green robot
+        22: { x: 4, y: 7 }, // Black robot (center)
+    };
     targets: ITarget[];
     imgLoaded: Promise<void>;
 
@@ -80,6 +95,7 @@ export class Board {
             loadImage(this.edgeH, assetPath('edge-h.png')),
             loadImage(this.edgeV, assetPath('edge-v.png')),
             ...this.iconAssets.map(icon => loadImage(icon.image, assetPath(`${icon.type}-${icon.color}.png`))),
+            ...this.robots.map(robot => loadImage(robot.image, assetPath(`${robot.type}-${robot.color}.png`))),
 
         ]).then(() => undefined);
     }
@@ -90,19 +106,17 @@ export class Board {
         this.#drawEdges();
         this.#drawWalls();
         this.#drawTargets();
+        this.#drawRobots();
     }
 
     showNextIcon(iconId: number) {
         const target = this.#getIconAssetById(iconId);
-
         //draw icon in center of board
         this.ctx.fillStyle = 'grey';
-        this.ctx.fillRect(7.5 * ART_SIZE, 7.5 * ART_SIZE,  ART_SIZE, ART_SIZE);
+        this.ctx.fillRect(7.5 * ART_SIZE, 7.5 * ART_SIZE, ART_SIZE, ART_SIZE);
         this.ctx.drawImage(target.image, 7.5 * ART_SIZE, 7.5 * ART_SIZE, ART_SIZE, ART_SIZE);
 
     }
-
-
     #drawTiles() {
         this.ctx.fillRect(0, 0, GRID_SIZE * ART_SIZE, GRID_SIZE * ART_SIZE);
         for (let x = 0; x < GRID_SIZE; x++) {
@@ -144,7 +158,6 @@ export class Board {
             }
         }
     }
-
     #drawTargets() {
         for (const target of this.targets) {
             const { position, icon } = target;
@@ -157,6 +170,19 @@ export class Board {
             }
             // Draw the target based on its icon
             this.ctx.drawImage(iconAsset.image, x, y, ART_SIZE, ART_SIZE);
+        }
+    }
+    #drawRobots() {
+        for (const robot of this.robots) {
+            const position = this.robotPositions[robot.id];
+            if (!position) {
+                console.error(`Robot position not found for id: ${robot.id}`);
+                continue;
+            }
+            const x = position.x * ART_SIZE;
+            const y = position.y * ART_SIZE;
+
+            this.ctx.drawImage(robot.image, x, y, ART_SIZE, ART_SIZE);
         }
     }
 }

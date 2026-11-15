@@ -22,7 +22,6 @@ export class Game {
 
     async nextTurn() {
         await this.ready;
-        console.log(this.items);
         if (this.items.length === 0) {
             this.ready = this.#resetBoard();
             await this.ready;
