@@ -12,6 +12,7 @@ function loadImage(image: HTMLImageElement, src: string): Promise<void> {
     });
 }
 
+const assetPath = (filename: string) => `${import.meta.env.BASE_URL}assets/${filename}`;
 
 
 export class Board {
@@ -69,12 +70,12 @@ export class Board {
         this.targets = board.targets;
 
         this.imgLoaded = Promise.all([
-            loadImage(this.tile, '/assets/tile.png'),
-            loadImage(this.wallH, '/assets/wall-h.png'),
-            loadImage(this.wallV, '/assets/wall-v.png'),
-            loadImage(this.edgeH, '/assets/edge-h.png'),
-            loadImage(this.edgeV, '/assets/edge-v.png'),
-            ...this.iconAssets.map(icon => loadImage(icon.image, `/assets/${icon.type}-${icon.color}.png`)),
+            loadImage(this.tile, assetPath('tile.png')),
+            loadImage(this.wallH, assetPath('wall-h.png')),
+            loadImage(this.wallV, assetPath('wall-v.png')),
+            loadImage(this.edgeH, assetPath('edge-h.png')),
+            loadImage(this.edgeV, assetPath('edge-v.png')),
+            ...this.iconAssets.map(icon => loadImage(icon.image, assetPath(`${icon.type}-${icon.color}.png`))),
 
         ]).then(() => undefined);
     }
