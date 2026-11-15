@@ -52,18 +52,36 @@ canvas.addEventListener('click', event => {
 
 const startButton = document.getElementById('start') as HTMLButtonElement;
 const rounds = document.getElementById('rounds') as HTMLDivElement;
-const moves = document.getElementById('moves') as HTMLDivElement;
+const moveCount = document.getElementById('move-count') as HTMLElement;
 const message = document.getElementById('message') as HTMLDivElement;
 const undoButton = document.getElementById('undo') as HTMLButtonElement;
 const retryButton = document.getElementById('retry') as HTMLButtonElement;
+let roundsRemaining = 17;
+const updateRoundDeck = (remaining: number) => {
+    rounds.replaceChildren();
+    rounds.setAttribute('aria-label', `${remaining} rounds remaining`);
+    for (let index = 0; index < remaining; index++) {
+        const icon = document.createElement('span');
+        icon.className = 'deck-icon';
+        icon.style.left = `${50 + (index - (remaining - 1) / 2) * 3}%`;
+        icon.style.setProperty('--deck-vertical-offset', `${(index - (remaining - 1) / 2) * 6}px`);
+        icon.style.transform = `translateX(-50%) rotate(${(index - (remaining - 1) / 2) * 3}deg)`;
+        icon.style.zIndex = `${index}`;
+        rounds.append(icon);
+    }
+};
 const updateMoveCount = () => {
-    moves.textContent = `Robots moved: ${board.movesThisRound}`;
-    message.textContent = board.roundComplete ? 'Success!' : '';
+    moveCount.textContent = `${board.movesThisRound}`;
+    message.textContent = board.roundComplete
+        ? roundsRemaining === 0 ? 'Game finished!' : 'Success!'
+        : roundsRemaining === 0 ? 'Final round' : '';
 };
 
 startButton.addEventListener('click', () => {
     game.nextTurn().then(roundsleft => {
-        rounds.textContent = `Rounds left: ${roundsleft}`;
+        roundsRemaining = roundsleft;
+        updateRoundDeck(roundsRemaining);
+        startButton.textContent = roundsRemaining === 0 ? 'New Game' : 'Next Round';
         updateMoveCount();
     });
 
@@ -78,3 +96,5 @@ retryButton.addEventListener('click', () => {
     board.retryRound();
     updateMoveCount();
 });
+
+updateRoundDeck(17);

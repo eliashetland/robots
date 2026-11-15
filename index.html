@@ -11,8 +11,11 @@
     <canvas id="canvas" width="1024" height="1024"></canvas>
 
     <div class="controls">
-      <div id="rounds">17</div>
-      <div id="moves">Robots moved: 0</div>
+      <div id="rounds" aria-label="17 rounds remaining"></div>
+      <div id="moves">
+        <span class="moves-label">Robots moved</span>
+        <strong id="move-count">0</strong>
+      </div>
       <div id="message"></div>
       <button id="start">Next Round</button>
       <button id="undo">Undo</button>
