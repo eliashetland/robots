@@ -22,6 +22,39 @@ body {
     gap: 14px;
 }
 
+#confetti {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.confetti-piece {
+    position: absolute;
+    width: 9px;
+    height: 15px;
+    border-radius: 2px;
+    animation: confetti-burst 1.2s ease-out forwards;
+}
+
+@keyframes confetti-burst {
+    from {
+        opacity: 1;
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+
+    45% {
+        opacity: 1;
+        transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(360deg);
+    }
+
+    to {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--end-x)), calc(-50% + var(--end-y))) rotate(720deg);
+    }
+}
+
 #canvas {
     width: 100%;
     height: auto;

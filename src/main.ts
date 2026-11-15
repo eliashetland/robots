@@ -67,6 +67,7 @@ const message = document.getElementById('message') as HTMLDivElement;
 const undoButton = document.getElementById('undo') as HTMLButtonElement;
 const retryButton = document.getElementById('retry') as HTMLButtonElement;
 const trailToggle = document.getElementById('show-trails') as HTMLInputElement;
+const confetti = document.getElementById('confetti') as HTMLDivElement;
 let roundsRemaining = 17;
 let roundStartedAt: number | null = null;
 let timerId: number | null = null;
@@ -111,11 +112,38 @@ const updateMoveCount = () => {
         updateTimer();
     }
     message.textContent = board.roundComplete
-        ? roundsRemaining === 0 ? 'Game finished!' : 'Success!'
+        ? roundsRemaining === 0 ? 'Game finished!' : ''
         : roundsRemaining === 0 ? 'Final round' : '';
 };
 
-board.onRoundComplete = updateMoveCount;
+const showConfetti = () => {
+    const colors = ['#ef6b73', '#62b5f5', '#f5ca58', '#68d391', '#d59bf6'];
+    const canvasBounds = canvas.getBoundingClientRect();
+    confetti.replaceChildren();
+    for (let index = 0; index < 42; index++) {
+        const piece = document.createElement('span');
+        piece.className = 'confetti-piece';
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 80 + Math.random() * 180;
+        const driftX = Math.cos(angle) * distance;
+        const driftY = Math.sin(angle) * distance;
+        piece.style.left = `${canvasBounds.left + canvasBounds.width / 2}px`;
+        piece.style.top = `${canvasBounds.top + canvasBounds.height / 2}px`;
+        piece.style.backgroundColor = colors[index % colors.length];
+        piece.style.animationDelay = `${Math.random() * 180}ms`;
+        piece.style.setProperty('--dx', `${driftX}px`);
+        piece.style.setProperty('--dy', `${driftY}px`);
+        piece.style.setProperty('--end-x', `${driftX * 1.5}px`);
+        piece.style.setProperty('--end-y', `${driftY * 1.5 + 220}px`);
+        confetti.append(piece);
+        window.setTimeout(() => piece.remove(), 1500);
+    }
+};
+
+board.onRoundComplete = () => {
+    updateMoveCount();
+    showConfetti();
+};
 
 startButton.addEventListener('click', () => {
     startTimer();
