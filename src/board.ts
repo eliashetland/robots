@@ -48,6 +48,10 @@ export class Board {
         return this.iconAssets.find(icon => icon.type === type && icon.color === color) as IIconAsset;
     }
 
+    #getIconAssetById(id: number): IIconAsset {
+        return this.iconAssets.find(icon => icon.id === id) as IIconAsset;
+    }
+
     walls: IWall[] = [
         //center
         { from: { x: 6, y: 7 }, to: { x: 7, y: 7 } },
@@ -86,6 +90,16 @@ export class Board {
         this.#drawEdges();
         this.#drawWalls();
         this.#drawTargets();
+    }
+
+    showNextIcon(iconId: number) {
+        const target = this.#getIconAssetById(iconId);
+
+        //draw icon in center of board
+        this.ctx.fillStyle = 'grey';
+        this.ctx.fillRect(7.5 * ART_SIZE, 7.5 * ART_SIZE,  ART_SIZE, ART_SIZE);
+        this.ctx.drawImage(target.image, 7.5 * ART_SIZE, 7.5 * ART_SIZE, ART_SIZE, ART_SIZE);
+
     }
 
 
