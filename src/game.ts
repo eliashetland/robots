@@ -14,6 +14,7 @@ export class Game {
     }
 
     async #resetBoard() {
+        this.board.randomizeRobotPositions();
         this.board.resetMoveHistory();
         await this.board.newBoard();
         this.items = Array.from({ length: 17 }, (_, i) => i + 1);

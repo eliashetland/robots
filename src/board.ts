@@ -114,6 +114,59 @@ export class Board {
         this.#drawBoard();
     }
 
+    randomizeRobotPositions() {
+        const availablePositions: IPosition[] = [];
+        for (let x = 0; x < GRID_SIZE; x++) {
+            for (let y = 0; y < GRID_SIZE; y++) {
+                if (x >= 7 && x <= 8 && y >= 7 && y <= 8) {
+                    continue;
+                }
+                if (this.targets.some(target =>
+                    target.position.x === x && target.position.y === y,
+                )) {
+                    continue;
+                }
+                availablePositions.push({ x, y });
+            }
+        }
+
+        const assignments: { [key: number]: IPosition } = {};
+        const usedPositions = new Set<string>();
+        const assignPosition = (robotIndex: number): boolean => {
+            if (robotIndex === this.robots.length) {
+                return true;
+            }
+
+            const robot = this.robots[robotIndex];
+            const candidates = availablePositions
+                .filter(position => {
+                    const positionKey = `${position.x},${position.y}`;
+                    return !usedPositions.has(positionKey);
+                })
+                .sort(() => Math.random() - 0.5);
+
+            for (const candidate of candidates) {
+                const positionKey = `${candidate.x},${candidate.y}`;
+                usedPositions.add(positionKey);
+                assignments[robot.id] = candidate;
+                if (assignPosition(robotIndex + 1)) {
+                    return true;
+                }
+                usedPositions.delete(positionKey);
+                delete assignments[robot.id];
+            }
+            return false;
+        };
+
+        if (!assignPosition(0)) {
+            throw new Error('Unable to find valid starting positions for all robots');
+        }
+
+        this.robotPositions = Object.fromEntries(
+            Object.entries(assignments).map(([id, position]) => [id, { ...position }]),
+        );
+    }
+
     showNextIcon(iconId: number) {
         this.#currentIconId = iconId;
         this.#roundStartPositions = Object.fromEntries(
