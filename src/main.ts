@@ -53,9 +53,12 @@ canvas.addEventListener('click', event => {
 const startButton = document.getElementById('start') as HTMLButtonElement;
 const rounds = document.getElementById('rounds') as HTMLDivElement;
 const moves = document.getElementById('moves') as HTMLDivElement;
+const message = document.getElementById('message') as HTMLDivElement;
 const undoButton = document.getElementById('undo') as HTMLButtonElement;
+const retryButton = document.getElementById('retry') as HTMLButtonElement;
 const updateMoveCount = () => {
     moves.textContent = `Robots moved: ${board.movesThisRound}`;
+    message.textContent = board.roundComplete ? 'Success!' : '';
 };
 
 startButton.addEventListener('click', () => {
@@ -68,5 +71,10 @@ startButton.addEventListener('click', () => {
 
 undoButton.addEventListener('click', () => {
     board.undoLastMove();
+    updateMoveCount();
+});
+
+retryButton.addEventListener('click', () => {
+    board.retryRound();
     updateMoveCount();
 });

@@ -88,6 +88,8 @@ export class Board {
     #selectedRobotId: number | null = null;
     #currentIconId: number | null = null;
     #moveHistory: RobotMove[] = [];
+    #roundStartPositions: { [key: number]: IPosition } = {};
+    #roundComplete = false;
 
     constructor(ctx: CanvasRenderingContext2D, board: IBoard) {
         this.ctx = ctx;
@@ -114,6 +116,10 @@ export class Board {
 
     showNextIcon(iconId: number) {
         this.#currentIconId = iconId;
+        this.#roundStartPositions = Object.fromEntries(
+            Object.entries(this.robotPositions).map(([id, position]) => [id, { ...position }]),
+        );
+        this.#roundComplete = false;
         this.#drawBoard();
     }
 
@@ -121,13 +127,35 @@ export class Board {
         this.#moveHistory = [];
         this.#currentIconId = null;
         this.#selectedRobotId = null;
+        this.#roundComplete = false;
     }
 
     get movesThisRound(): number {
         return this.#moveHistory.length;
     }
 
+    get roundComplete(): boolean {
+        return this.#roundComplete;
+    }
+
+    retryRound(): boolean {
+        if (this.#currentIconId === null || Object.keys(this.#roundStartPositions).length === 0) {
+            return false;
+        }
+        this.robotPositions = Object.fromEntries(
+            Object.entries(this.#roundStartPositions).map(([id, position]) => [id, { ...position }]),
+        );
+        this.#moveHistory = [];
+        this.#selectedRobotId = null;
+        this.#roundComplete = false;
+        this.#drawBoard();
+        return true;
+    }
+
     undoLastMove(): boolean {
+        if (this.#roundComplete) {
+            return false;
+        }
         const move = this.#moveHistory.pop();
         if (!move) {
             return false;
@@ -139,7 +167,7 @@ export class Board {
     }
 
     handleClick(x: number, y: number) {
-        if (this.#currentIconId === null) {
+        if (this.#currentIconId === null || this.#roundComplete) {
             return;
         }
         const tileX = Math.floor(x / ART_SIZE);
@@ -172,7 +200,7 @@ export class Board {
     }
 
     handleDrag(startX: number, startY: number, endX: number, endY: number): boolean {
-        if (this.#currentIconId === null) {
+        if (this.#currentIconId === null || this.#roundComplete) {
             return false;
         }
         const robot = this.#getRobotAt(
@@ -406,7 +434,25 @@ export class Board {
         this.#moveHistory.push({ robotId, position: { ...position } });
         position.x = nextPosition.x;
         position.y = nextPosition.y;
+        if (this.#isCorrectRobotAtTarget(robotId)) {
+            this.#roundComplete = true;
+        }
         this.#selectedRobotId = null;
         this.#drawBoard();
+    }
+
+    #isCorrectRobotAtTarget(robotId: number): boolean {
+        const robot = this.robots.find(candidate => candidate.id === robotId);
+        const position = this.robotPositions[robotId];
+        const target = this.targets.find(candidate =>
+            candidate.position.x === position.x &&
+            candidate.position.y === position.y &&
+            candidate.icon.color === robot?.color,
+        );
+        if (!target || this.#currentIconId === null) {
+            return false;
+        }
+        const targetAsset = this.#getIconAsset(target.icon.type, target.icon.color);
+        return targetAsset.id === this.#currentIconId;
     }
 }
