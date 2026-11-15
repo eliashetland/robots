@@ -13,6 +13,7 @@ type RobotAnimation = {
     to: IPosition;
     startedAt: number;
     duration: number;
+    reselect: boolean;
 };
 
 function loadImage(image: HTMLImageElement, src: string): Promise<void> {
@@ -100,6 +101,7 @@ export class Board {
     #showTrails = false;
     #robotPaths: { [key: number]: IPosition[] } = {};
     #robotAnimation: RobotAnimation | null = null;
+    #selectionPinned = false;
     onRoundComplete: (() => void) | null = null;
 
     constructor(ctx: CanvasRenderingContext2D, board: IBoard) {
@@ -200,6 +202,7 @@ export class Board {
         this.#robotPaths = {};
         this.#currentIconId = null;
         this.#selectedRobotId = null;
+        this.#selectionPinned = false;
         this.#roundComplete = false;
         this.#robotAnimation = null;
     }
@@ -226,6 +229,7 @@ export class Board {
         );
         this.#moveHistory = [];
         this.#selectedRobotId = null;
+        this.#selectionPinned = false;
         this.#roundComplete = false;
         this.#drawBoard();
         return true;
@@ -245,6 +249,7 @@ export class Board {
             path.pop();
         }
         this.#selectedRobotId = null;
+        this.#selectionPinned = false;
         this.#drawBoard();
         return true;
     }
@@ -259,6 +264,7 @@ export class Board {
 
         if (robot && robot.id !== this.#selectedRobotId) {
             this.#selectedRobotId = robot.id;
+            this.#selectionPinned = false;
             this.#drawBoard();
             return;
         }
@@ -270,7 +276,7 @@ export class Board {
         const position = this.robotPositions[this.#selectedRobotId];
         const direction = this.#getDirectionFromClick(x, y);
         if (direction) {
-            this.#moveSelectedRobot(direction);
+            this.#moveSelectedRobot(direction, true);
             return;
         }
 
@@ -291,10 +297,14 @@ export class Board {
         const robot = this.#getRobotAt(tileX, tileY);
         if (robot && robot.id !== this.#selectedRobotId) {
             this.#selectedRobotId = robot.id;
+            this.#selectionPinned = false;
             this.#drawBoard();
             return;
         }
         if (this.#selectedRobotId === null) {
+            return;
+        }
+        if (this.#selectionPinned) {
             return;
         }
 
@@ -312,6 +322,7 @@ export class Board {
     clearHover() {
         if (this.#selectedRobotId !== null) {
             this.#selectedRobotId = null;
+            this.#selectionPinned = false;
             this.#drawBoard();
         }
     }
@@ -511,6 +522,10 @@ export class Board {
             this.#roundComplete = true;
             this.onRoundComplete?.();
         }
+        if (animation.reselect && !this.#roundComplete) {
+            this.#selectedRobotId = animation.robotId;
+            this.#selectionPinned = true;
+        }
         this.#drawBoard();
     }
 
@@ -620,7 +635,7 @@ export class Board {
         );
     }
 
-    #moveSelectedRobot(direction: Direction) {
+    #moveSelectedRobot(direction: Direction, reselect = false) {
         const robotId = this.#selectedRobotId!;
         const position = this.robotPositions[robotId];
         const nextPosition = this.findNextCell(position, direction);
@@ -641,8 +656,10 @@ export class Board {
             to: { ...nextPosition },
             startedAt: performance.now(),
             duration: Math.min(450, Math.max(100, distance * 55)),
+            reselect,
         };
         this.#selectedRobotId = null;
+        this.#selectionPinned = false;
         requestAnimationFrame(timestamp => this.#animateRobotMove(timestamp));
     }
 
