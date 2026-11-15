@@ -1,6 +1,6 @@
 import { ART_SIZE, EDGE_WIDTH, GRID_SIZE, WALL_WIDTH } from "./constants";
 import type { IBoard } from "./types/IBoard";
-import type { IIcon, IIconAsset } from "./types/IIcon";
+import type { IIconAsset } from "./types/IIcon";
 import type { ITarget } from "./types/ITarget";
 import type { IWall } from "./types/IWall";
 
