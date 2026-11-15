@@ -118,10 +118,7 @@ export class Board {
     handleClick(x: number, y: number) {
         const tileX = Math.floor(x / ART_SIZE);
         const tileY = Math.floor(y / ART_SIZE);
-        const robot = this.robots.find(robot => {
-            const position = this.robotPositions[robot.id];
-            return position !== undefined && position.x === tileX && position.y === tileY;
-        });
+        const robot = this.#getRobotAt(tileX, tileY);
 
         if (robot && robot.id !== this.#selectedRobotId) {
             this.#selectedRobotId = robot.id;
@@ -146,6 +143,37 @@ export class Board {
         }
 
     }
+
+    handleDrag(startX: number, startY: number, endX: number, endY: number): boolean {
+        const robot = this.#getRobotAt(
+            Math.floor(startX / ART_SIZE),
+            Math.floor(startY / ART_SIZE),
+        );
+        if (!robot) {
+            return false;
+        }
+
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+        if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 8) {
+            return false;
+        }
+
+        this.#selectedRobotId = robot.id;
+        const direction: Direction = Math.abs(deltaX) > Math.abs(deltaY)
+            ? deltaX > 0 ? 'right' : 'left'
+            : deltaY > 0 ? 'down' : 'up';
+        this.#moveSelectedRobot(direction);
+        return true;
+    }
+
+    #getRobotAt(tileX: number, tileY: number): IIconAsset | undefined {
+        return this.robots.find(robot => {
+            const position = this.robotPositions[robot.id];
+            return position !== undefined && position.x === tileX && position.y === tileY;
+        });
+    }
+
     #drawBoard() {
         this.#drawTiles();
         this.#drawEdges();

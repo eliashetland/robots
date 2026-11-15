@@ -10,12 +10,42 @@ const board = new Board(ctx!, board1);
 
 const game = new Game(board);
 
-canvas.addEventListener('click', event => {
+let dragStart: { x: number; y: number } | null = null;
+let dragged = false;
+const getCanvasPoint = (event: MouseEvent | PointerEvent) => {
     const bounds = canvas.getBoundingClientRect();
-    board.handleClick(
-        (event.clientX - bounds.left) * canvas.width / bounds.width,
-        (event.clientY - bounds.top) * canvas.height / bounds.height,
-    );
+    return {
+        x: (event.clientX - bounds.left) * canvas.width / bounds.width,
+        y: (event.clientY - bounds.top) * canvas.height / bounds.height,
+    };
+};
+
+canvas.addEventListener('pointerdown', event => {
+    dragStart = getCanvasPoint(event);
+    dragged = false;
+    canvas.setPointerCapture(event.pointerId);
+});
+
+canvas.addEventListener('pointerup', event => {
+    if (!dragStart) {
+        return;
+    }
+    const end = getCanvasPoint(event);
+    dragged = board.handleDrag(dragStart.x, dragStart.y, end.x, end.y);
+    dragStart = null;
+});
+
+canvas.addEventListener('pointercancel', () => {
+    dragStart = null;
+});
+
+canvas.addEventListener('click', event => {
+    if (dragged) {
+        dragged = false;
+        return;
+    }
+    const point = getCanvasPoint(event);
+    board.handleClick(point.x, point.y);
 });
 
 const startButton = document.getElementById('start') as HTMLButtonElement;

@@ -24,5 +24,6 @@ body {
 
     aspect-ratio: 1/1;
     width: 100%;
+    touch-action: none;
 
 }
