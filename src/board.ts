@@ -131,15 +131,16 @@ export class Board {
         }
 
         const position = this.robotPositions[this.#selectedRobotId];
+        const direction = this.#getDirectionFromClick(x, y);
+        if (direction) {
+            this.#moveSelectedRobot(direction);
+            return;
+        }
+
         if (!position || tileX !== position.x || tileY !== position.y) {
             this.#selectedRobotId = null;
             this.#drawBoard();
             return;
-        }
-
-        const direction = this.#getDirectionFromClick(x, y);
-        if (direction) {
-            this.#moveSelectedRobot(direction);
         }
 
     }
@@ -270,43 +271,61 @@ export class Board {
         if (!position) {
             return;
         }
-
-        const centerX = (position.x + 0.5) * ART_SIZE;
-        const centerY = (position.y + 0.5) * ART_SIZE;
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         this.ctx.strokeStyle = 'rgba(14, 38, 58, 0.9)';
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 7;
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
         for (const direction of ['up', 'right', 'down', 'left'] as Direction[]) {
-            this.#drawArrow(centerX, centerY, direction);
+            const nextPosition = this.findNextCell(position, direction);
+            if (nextPosition.x === position.x && nextPosition.y === position.y) {
+                continue;
+            }
+            const arrowPosition = this.#getAdjacentPosition(position, direction);
+            this.#drawArrow(
+                (arrowPosition.x + 0.5) * ART_SIZE,
+                (arrowPosition.y + 0.5) * ART_SIZE,
+                direction,
+            );
         }
     }
 
     #drawArrow(centerX: number, centerY: number, direction: Direction) {
         const points: Record<Direction, [number, number][]> = {
-            up: [[centerX, centerY - 25], [centerX - 10, centerY - 12], [centerX + 10, centerY - 12]],
-            right: [[centerX + 25, centerY], [centerX + 12, centerY - 10], [centerX + 12, centerY + 10]],
-            down: [[centerX, centerY + 25], [centerX - 10, centerY + 12], [centerX + 10, centerY + 12]],
-            left: [[centerX - 25, centerY], [centerX - 12, centerY - 10], [centerX - 12, centerY + 10]],
+            up: [[centerX, centerY + 12], [centerX, centerY - 12], [centerX - 9, centerY - 3], [centerX, centerY - 12], [centerX + 9, centerY - 3]],
+            right: [[centerX - 12, centerY], [centerX + 12, centerY], [centerX + 3, centerY - 9], [centerX + 12, centerY], [centerX + 3, centerY + 9]],
+            down: [[centerX, centerY - 12], [centerX, centerY + 12], [centerX - 9, centerY + 3], [centerX, centerY + 12], [centerX + 9, centerY + 3]],
+            left: [[centerX + 12, centerY], [centerX - 12, centerY], [centerX - 3, centerY - 9], [centerX - 12, centerY], [centerX - 3, centerY + 9]],
         };
         this.ctx.beginPath();
         points[direction].forEach(([x, y], index) => {
             if (index === 0) this.ctx.moveTo(x, y);
             else this.ctx.lineTo(x, y);
         });
-        this.ctx.closePath();
-        this.ctx.fill();
         this.ctx.stroke();
     }
 
     #getDirectionFromClick(x: number, y: number): Direction | null {
         const position = this.robotPositions[this.#selectedRobotId!];
-        const offsetX = x - (position.x + 0.5) * ART_SIZE;
-        const offsetY = y - (position.y + 0.5) * ART_SIZE;
-        if (Math.abs(offsetX) <= Math.abs(offsetY) && offsetY < -10) return 'up';
-        if (Math.abs(offsetY) <= Math.abs(offsetX) && offsetX > 10) return 'right';
-        if (Math.abs(offsetX) <= Math.abs(offsetY) && offsetY > 10) return 'down';
-        if (Math.abs(offsetY) <= Math.abs(offsetX) && offsetX < -10) return 'left';
+        const tileX = Math.floor(x / ART_SIZE);
+        const tileY = Math.floor(y / ART_SIZE);
+        const deltaX = tileX - position.x;
+        const deltaY = tileY - position.y;
+        if (deltaX === 0 && deltaY === -1) return 'up';
+        if (deltaX === 1 && deltaY === 0) return 'right';
+        if (deltaX === 0 && deltaY === 1) return 'down';
+        if (deltaX === -1 && deltaY === 0) return 'left';
         return null;
+    }
+
+    #getAdjacentPosition(position: IPosition, direction: Direction): IPosition {
+        const offsets: Record<Direction, IPosition> = {
+            up: { x: 0, y: -1 },
+            right: { x: 1, y: 0 },
+            down: { x: 0, y: 1 },
+            left: { x: -1, y: 0 },
+        };
+        const offset = offsets[direction];
+        return { x: position.x + offset.x, y: position.y + offset.y };
     }
 
     findNextCell(position: IPosition, direction: Direction): IPosition {
