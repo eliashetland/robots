@@ -252,6 +252,40 @@ export class Board {
 
     }
 
+    handleHover(x: number, y: number) {
+        if (this.#currentIconId === null || this.#roundComplete) {
+            return;
+        }
+        const tileX = Math.floor(x / ART_SIZE);
+        const tileY = Math.floor(y / ART_SIZE);
+        const robot = this.#getRobotAt(tileX, tileY);
+        if (robot && robot.id !== this.#selectedRobotId) {
+            this.#selectedRobotId = robot.id;
+            this.#drawBoard();
+            return;
+        }
+        if (this.#selectedRobotId === null) {
+            return;
+        }
+
+        const position = this.robotPositions[this.#selectedRobotId];
+        const direction = this.#getDirectionFromClick(x, y);
+        const arrowIsAllowed = direction !== null &&
+            this.#canMoveInDirection(position, direction);
+        const overRobot = tileX === position.x && tileY === position.y;
+        if (!arrowIsAllowed && !overRobot) {
+            this.#selectedRobotId = null;
+            this.#drawBoard();
+        }
+    }
+
+    clearHover() {
+        if (this.#selectedRobotId !== null) {
+            this.#selectedRobotId = null;
+            this.#drawBoard();
+        }
+    }
+
     handleDrag(startX: number, startY: number, endX: number, endY: number): boolean {
         if (this.#currentIconId === null || this.#roundComplete) {
             return false;
@@ -386,8 +420,7 @@ export class Board {
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
         for (const direction of ['up', 'right', 'down', 'left'] as Direction[]) {
-            const nextPosition = this.findNextCell(position, direction);
-            if (nextPosition.x === position.x && nextPosition.y === position.y) {
+            if (!this.#canMoveInDirection(position, direction)) {
                 continue;
             }
             const arrowPosition = this.#getAdjacentPosition(position, direction);
@@ -397,6 +430,11 @@ export class Board {
                 direction,
             );
         }
+    }
+
+    #canMoveInDirection(position: IPosition, direction: Direction): boolean {
+        const nextPosition = this.findNextCell(position, direction);
+        return nextPosition.x !== position.x || nextPosition.y !== position.y;
     }
 
     #drawArrow(centerX: number, centerY: number, direction: Direction) {

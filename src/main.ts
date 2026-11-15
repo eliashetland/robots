@@ -50,6 +50,15 @@ canvas.addEventListener('click', event => {
     updateMoveCount();
 });
 
+canvas.addEventListener('mousemove', event => {
+    const point = getCanvasPoint(event);
+    board.handleHover(point.x, point.y);
+});
+
+canvas.addEventListener('mouseleave', () => {
+    board.clearHover();
+});
+
 const startButton = document.getElementById('start') as HTMLButtonElement;
 const rounds = document.getElementById('rounds') as HTMLDivElement;
 const moveCount = document.getElementById('move-count') as HTMLElement;
