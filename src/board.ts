@@ -90,6 +90,8 @@ export class Board {
     #moveHistory: RobotMove[] = [];
     #roundStartPositions: { [key: number]: IPosition } = {};
     #roundComplete = false;
+    #showTrails = false;
+    #robotPaths: { [key: number]: IPosition[] } = {};
 
     constructor(ctx: CanvasRenderingContext2D, board: IBoard) {
         this.ctx = ctx;
@@ -172,12 +174,21 @@ export class Board {
         this.#roundStartPositions = Object.fromEntries(
             Object.entries(this.robotPositions).map(([id, position]) => [id, { ...position }]),
         );
+        this.#robotPaths = Object.fromEntries(
+            Object.entries(this.robotPositions).map(([id, position]) => [id, [{ ...position }]]),
+        );
         this.#roundComplete = false;
+        this.#drawBoard();
+    }
+
+    setShowTrails(showTrails: boolean) {
+        this.#showTrails = showTrails;
         this.#drawBoard();
     }
 
     resetMoveHistory() {
         this.#moveHistory = [];
+        this.#robotPaths = {};
         this.#currentIconId = null;
         this.#selectedRobotId = null;
         this.#roundComplete = false;
@@ -198,6 +209,9 @@ export class Board {
         this.robotPositions = Object.fromEntries(
             Object.entries(this.#roundStartPositions).map(([id, position]) => [id, { ...position }]),
         );
+        this.#robotPaths = Object.fromEntries(
+            Object.entries(this.robotPositions).map(([id, position]) => [id, [{ ...position }]]),
+        );
         this.#moveHistory = [];
         this.#selectedRobotId = null;
         this.#roundComplete = false;
@@ -214,6 +228,10 @@ export class Board {
             return false;
         }
         this.robotPositions[move.robotId] = { ...move.position };
+        const path = this.#robotPaths[move.robotId];
+        if (path && path.length > 1) {
+            path.pop();
+        }
         this.#selectedRobotId = null;
         this.#drawBoard();
         return true;
@@ -323,6 +341,7 @@ export class Board {
         this.#drawTiles();
         this.#drawEdges();
         this.#drawWalls();
+        this.#drawRobotTrails();
         this.#drawTargets();
         this.#drawRobots();
         this.#drawCurrentIcon();
@@ -405,6 +424,41 @@ export class Board {
 
             this.ctx.drawImage(robot.image, x, y, ART_SIZE, ART_SIZE);
         }
+    }
+
+    #drawRobotTrails() {
+        if (!this.#showTrails) {
+            return;
+        }
+        for (const robot of this.robots) {
+            const path = this.#robotPaths[robot.id];
+            if (!path || path.length < 2) {
+                continue;
+            }
+            this.ctx.strokeStyle = this.#getTrailColor(robot.color);
+            this.ctx.lineWidth = 6;
+            this.ctx.lineCap = 'round';
+            this.ctx.lineJoin = 'round';
+            this.ctx.beginPath();
+            path.forEach((position, index) => {
+                const x = (position.x + 0.5) * ART_SIZE;
+                const y = (position.y + 0.5) * ART_SIZE;
+                if (index === 0) this.ctx.moveTo(x, y);
+                else this.ctx.lineTo(x, y);
+            });
+            this.ctx.stroke();
+        }
+    }
+
+    #getTrailColor(color: string): string {
+        const colors: Record<string, string> = {
+            red: '#ef6b73',
+            blue: '#62b5f5',
+            yellow: '#f5ca58',
+            green: '#68d391',
+            black: '#536271',
+        };
+        return colors[color] ?? '#d9e3ea';
     }
 
     #drawRobotArrows() {
@@ -525,6 +579,7 @@ export class Board {
         this.#moveHistory.push({ robotId, position: { ...position } });
         position.x = nextPosition.x;
         position.y = nextPosition.y;
+        this.#robotPaths[robotId]?.push({ ...nextPosition });
         if (this.#isCorrectRobotAtTarget(robotId)) {
             this.#roundComplete = true;
         }

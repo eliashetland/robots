@@ -115,6 +115,23 @@ body {
     font-weight: 700;
 }
 
+.trail-toggle {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #b8cad8;
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+
+.trail-toggle input {
+    width: 18px;
+    height: 18px;
+    accent-color: #3ab77c;
+}
+
 button {
     order: 4;
     min-height: 48px;

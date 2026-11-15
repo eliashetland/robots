@@ -66,6 +66,7 @@ const roundTimer = document.getElementById('round-timer') as HTMLElement;
 const message = document.getElementById('message') as HTMLDivElement;
 const undoButton = document.getElementById('undo') as HTMLButtonElement;
 const retryButton = document.getElementById('retry') as HTMLButtonElement;
+const trailToggle = document.getElementById('show-trails') as HTMLInputElement;
 let roundsRemaining = 17;
 let roundStartedAt: number | null = null;
 let timerId: number | null = null;
@@ -136,6 +137,10 @@ retryButton.addEventListener('click', () => {
         startTimer();
     }
     updateMoveCount();
+});
+
+trailToggle.addEventListener('change', () => {
+    board.setShowTrails(trailToggle.checked);
 });
 
 updateRoundDeck(17);
