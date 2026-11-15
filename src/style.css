@@ -146,6 +146,11 @@ button:active {
     background: #3ab77c;
 }
 
+#start.start-game {
+    min-height: 64px;
+    font-size: 1.15rem;
+}
+
 @media (orientation: landscape) {
     #app {
         width: min(100%, 1080px);
@@ -213,6 +218,11 @@ button:active {
         min-width: 0;
         padding: 8px 6px;
         font-size: 0.85rem;
+    }
+
+    #start.start-game {
+        min-height: 58px;
+        font-size: 1rem;
     }
 
     .deck-icon {

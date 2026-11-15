@@ -110,6 +110,7 @@ startButton.addEventListener('click', () => {
     game.nextTurn().then(roundsleft => {
         roundsRemaining = roundsleft;
         updateRoundDeck(roundsRemaining);
+        startButton.classList.remove('start-game');
         startButton.textContent = roundsRemaining === 0 ? 'New Game' : 'Next Round';
         updateMoveCount();
     });

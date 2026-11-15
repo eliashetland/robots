@@ -29,6 +29,7 @@ export class Game {
         }
 
         const nextItemId = this.items.pop()!;
+        this.board.resetMoveHistory();
         this.board.showNextIcon(nextItemId);
 
         return this.items.length;
