@@ -1,6 +1,8 @@
 import type { IBoard } from "../types/IBoard";
 
 export const board1: IBoard = {
+    gridSize: 16,
+    robotColors: ['red', 'blue', 'yellow', 'green', 'black'],
     walls: [
         { from: { x: 4, y: 0 }, to: { x: 5, y: 0 } },
         { from: { x: 10, y: 0 }, to: { x: 11, y: 0 } },

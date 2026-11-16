@@ -1,5 +1,6 @@
 import { Board } from "./board";
 import { board1 } from "./boards/board1";
+import { board8 } from "./boards/board8";
 import { Game } from "./game";
 
 if ('serviceWorker' in navigator) {
@@ -13,9 +14,8 @@ if ('serviceWorker' in navigator) {
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d');
 
-const board = new Board(ctx!, board1);
-
-const game = new Game(board);
+let board: Board;
+let game: Game;
 
 let dragStart: { x: number; y: number } | null = null;
 let dragged = false;
@@ -67,6 +67,8 @@ canvas.addEventListener('mouseleave', () => {
 });
 
 const startButton = document.getElementById('start') as HTMLButtonElement;
+const classicModeButton = document.getElementById('classic-mode') as HTMLButtonElement;
+const simpleModeButton = document.getElementById('simple-mode') as HTMLButtonElement;
 const rounds = document.getElementById('rounds') as HTMLDivElement;
 const moveCount = document.getElementById('move-count') as HTMLElement;
 const roundTimer = document.getElementById('round-timer') as HTMLElement;
@@ -75,7 +77,7 @@ const undoButton = document.getElementById('undo') as HTMLButtonElement;
 const retryButton = document.getElementById('retry') as HTMLButtonElement;
 const trailToggle = document.getElementById('show-trails') as HTMLInputElement;
 const confetti = document.getElementById('confetti') as HTMLDivElement;
-let roundsRemaining = 17;
+let roundsRemaining = 0;
 let roundStartedAt: number | null = null;
 let timerId: number | null = null;
 
@@ -123,6 +125,31 @@ const updateMoveCount = () => {
         : roundsRemaining === 0 ? 'Final round' : '';
 };
 
+const selectBoard = (boardDefinition: typeof board1) => {
+    if (timerId !== null) {
+        window.clearInterval(timerId);
+        timerId = null;
+    }
+    roundStartedAt = null;
+    board = new Board(ctx!, boardDefinition);
+    game = new Game(board);
+    board.onRoundComplete = () => {
+        updateMoveCount();
+        showConfetti();
+    };
+    roundsRemaining = game.roundCount;
+    updateRoundDeck(roundsRemaining);
+    moveCount.textContent = '0';
+    roundTimer.textContent = 'Time 00:00';
+    message.textContent = '';
+    startButton.classList.add('start-game');
+    startButton.textContent = 'Start Game';
+    classicModeButton.classList.toggle('selected', boardDefinition === board1);
+    simpleModeButton.classList.toggle('selected', boardDefinition === board8);
+    classicModeButton.setAttribute('aria-pressed', `${boardDefinition === board1}`);
+    simpleModeButton.setAttribute('aria-pressed', `${boardDefinition === board8}`);
+};
+
 const showConfetti = () => {
     const colors = ['#ef6b73', '#62b5f5', '#f5ca58', '#68d391', '#d59bf6'];
     const canvasBounds = canvas.getBoundingClientRect();
@@ -145,11 +172,6 @@ const showConfetti = () => {
         confetti.append(piece);
         window.setTimeout(() => piece.remove(), 1500);
     }
-};
-
-board.onRoundComplete = () => {
-    updateMoveCount();
-    showConfetti();
 };
 
 startButton.addEventListener('click', () => {
@@ -180,4 +202,7 @@ trailToggle.addEventListener('change', () => {
     board.setShowTrails(trailToggle.checked);
 });
 
-updateRoundDeck(17);
+classicModeButton.addEventListener('click', () => selectBoard(board1));
+simpleModeButton.addEventListener('click', () => selectBoard(board8));
+
+selectBoard(board1);

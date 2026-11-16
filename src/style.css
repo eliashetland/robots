@@ -166,6 +166,28 @@ body {
     accent-color: #3ab77c;
 }
 
+.mode-switch {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.mode-switch button {
+    min-height: 38px;
+    padding: 6px 8px;
+    color: #b8cad8;
+    font-size: 0.8rem;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.mode-switch button.selected {
+    color: #f5f8fb;
+    background: #32617f;
+    border-color: #62b5f5;
+}
+
 button {
     order: 4;
     min-height: 48px;
@@ -237,6 +259,10 @@ button:active {
     .controls button {
         grid-column: 1 / -1;
     }
+
+    .mode-switch {
+        grid-column: 1 / -1;
+    }
 }
 
 @media (orientation: portrait) {
@@ -283,6 +309,11 @@ button:active {
         min-width: 0;
         padding: 8px 6px;
         font-size: 0.85rem;
+    }
+
+    .mode-switch button {
+        min-height: 38px;
+        font-size: 0.78rem;
     }
 
     #start.start-game {

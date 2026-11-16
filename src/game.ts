@@ -17,7 +17,7 @@ export class Game {
         this.board.randomizeRobotPositions();
         this.board.resetMoveHistory();
         await this.board.newBoard();
-        this.items = Array.from({ length: 17 }, (_, i) => i + 1);
+        this.items = [...this.board.roundIconIds];
         this.items = this.items.sort(() => Math.random() - 0.5); // Shuffle the items
     }
 
@@ -35,5 +35,9 @@ export class Game {
 
         return this.items.length;
 
+    }
+
+    get roundCount(): number {
+        return this.board.roundIconIds.length;
     }
 }

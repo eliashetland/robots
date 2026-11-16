@@ -1,4 +1,4 @@
-import { ART_SIZE, EDGE_WIDTH, GRID_SIZE, WALL_WIDTH } from "./constants";
+import { ART_SIZE, DEFAULT_GRID_SIZE, EDGE_WIDTH, WALL_WIDTH } from "./constants";
 import type { IBoard } from "./types/IBoard";
 import type { IIconAsset } from "./types/IIcon";
 import type { IPosition } from "./types/IPosition";
@@ -29,6 +29,7 @@ const assetPath = (filename: string) => `${import.meta.env.BASE_URL}assets/${fil
 
 export class Board {
     ctx: CanvasRenderingContext2D;
+    gridSize: number;
 
     tile: HTMLImageElement = new Image(ART_SIZE, ART_SIZE);
     wallH: HTMLImageElement = new Image(ART_SIZE, ART_SIZE);
@@ -56,13 +57,14 @@ export class Board {
         { image: new Image(ART_SIZE, ART_SIZE), type: 'hole', color: 'dark', id: 17 },
     ];
 
-    robots: IIconAsset[] = [
+    #allRobots: IIconAsset[] = [
         { image: new Image(ART_SIZE, ART_SIZE), type: 'robot', color: 'red', id: 18 },
         { image: new Image(ART_SIZE, ART_SIZE), type: 'robot', color: 'blue', id: 19 },
         { image: new Image(ART_SIZE, ART_SIZE), type: 'robot', color: 'yellow', id: 20 },
         { image: new Image(ART_SIZE, ART_SIZE), type: 'robot', color: 'green', id: 21 },
         { image: new Image(ART_SIZE, ART_SIZE), type: 'robot', color: 'black', id: 22 },
     ];
+    robots: IIconAsset[] = [];
 
     #getIconAsset(type: string, color: string): IIconAsset {
         return this.iconAssets.find(icon => icon.type === type && icon.color === color) as IIconAsset;
@@ -72,17 +74,7 @@ export class Board {
         return this.iconAssets.find(icon => icon.id === id) as IIconAsset;
     }
 
-    walls: IWall[] = [
-        //center
-        { from: { x: 6, y: 7 }, to: { x: 7, y: 7 } },
-        { from: { x: 6, y: 8 }, to: { x: 7, y: 8 } },
-        { from: { x: 7, y: 6 }, to: { x: 7, y: 7 } },
-        { from: { x: 8, y: 6 }, to: { x: 8, y: 7 } },
-        { from: { x: 8, y: 7 }, to: { x: 9, y: 7 } },
-        { from: { x: 8, y: 8 }, to: { x: 9, y: 8 } },
-        { from: { x: 7, y: 8 }, to: { x: 7, y: 9 } },
-        { from: { x: 8, y: 8 }, to: { x: 8, y: 9 } },
-    ];
+    walls: IWall[] = [];
 
     robotPositions: { [key: number]: { x: number; y: number } } = {
         18: { x: 0, y: 0 }, // Red robot
@@ -106,9 +98,13 @@ export class Board {
 
     constructor(ctx: CanvasRenderingContext2D, board: IBoard) {
         this.ctx = ctx;
+        this.gridSize = board.gridSize || DEFAULT_GRID_SIZE;
 
-        this.walls = this.walls.concat(board.walls);
+        this.walls = this.#getCenterWalls().concat(board.walls);
+        this.robots = this.#allRobots.filter(robot => board.robotColors.includes(robot.color));
         this.targets = board.targets;
+        this.ctx.canvas.width = this.gridSize * ART_SIZE;
+        this.ctx.canvas.height = this.gridSize * ART_SIZE;
 
         this.imgLoaded = Promise.all([
             loadImage(this.tile, assetPath('tile.png')),
@@ -129,9 +125,9 @@ export class Board {
 
     randomizeRobotPositions() {
         const availablePositions: IPosition[] = [];
-        for (let x = 0; x < GRID_SIZE; x++) {
-            for (let y = 0; y < GRID_SIZE; y++) {
-                if (x >= 7 && x <= 8 && y >= 7 && y <= 8) {
+        for (let x = 0; x < this.gridSize; x++) {
+            for (let y = 0; y < this.gridSize; y++) {
+                if (this.#isCenterPosition(x, y)) {
                     continue;
                 }
                 if (this.targets.some(target =>
@@ -213,6 +209,10 @@ export class Board {
 
     get roundComplete(): boolean {
         return this.#roundComplete;
+    }
+
+    get roundIconIds(): number[] {
+        return this.targets.map(target => this.#getIconAsset(target.icon.type, target.icon.color).id);
     }
 
     retryRound(): boolean {
@@ -377,15 +377,16 @@ export class Board {
         }
         const target = this.#getIconAssetById(this.#currentIconId);
         this.ctx.fillStyle = 'grey';
-        this.ctx.fillRect(7.5 * ART_SIZE, 7.5 * ART_SIZE, ART_SIZE, ART_SIZE);
-        this.ctx.drawImage(target.image, 7.5 * ART_SIZE, 7.5 * ART_SIZE, ART_SIZE, ART_SIZE);
+        const center = this.gridSize / 2 - 0.5;
+        this.ctx.fillRect(center * ART_SIZE, center * ART_SIZE, ART_SIZE, ART_SIZE);
+        this.ctx.drawImage(target.image, center * ART_SIZE, center * ART_SIZE, ART_SIZE, ART_SIZE);
     }
     #drawTiles() {
-        this.ctx.fillRect(0, 0, GRID_SIZE * ART_SIZE, GRID_SIZE * ART_SIZE);
-        for (let x = 0; x < GRID_SIZE; x++) {
-            for (let y = 0; y < GRID_SIZE; y++) {
+        this.ctx.fillRect(0, 0, this.gridSize * ART_SIZE, this.gridSize * ART_SIZE);
+        for (let x = 0; x < this.gridSize; x++) {
+            for (let y = 0; y < this.gridSize; y++) {
 
-                if (x >= 7 && x <= 8 && y >= 7 && y <= 8) {
+                if (this.#isCenterPosition(x, y)) {
                     //center area
                     this.ctx.fillStyle = 'grey';
                     this.ctx.fillRect(x * ART_SIZE, y * ART_SIZE, ART_SIZE, ART_SIZE);
@@ -396,14 +397,35 @@ export class Board {
         }
     }
     #drawEdges() {
-        for (let x = 0; x < GRID_SIZE; x++) {
+        for (let x = 0; x < this.gridSize; x++) {
             this.ctx.drawImage(this.edgeH, x * ART_SIZE, 0);
-            this.ctx.drawImage(this.edgeH, x * ART_SIZE, (GRID_SIZE * ART_SIZE) - EDGE_WIDTH);
+            this.ctx.drawImage(this.edgeH, x * ART_SIZE, (this.gridSize * ART_SIZE) - EDGE_WIDTH);
         }
-        for (let y = 0; y < GRID_SIZE; y++) {
+        for (let y = 0; y < this.gridSize; y++) {
             this.ctx.drawImage(this.edgeV, 0, y * ART_SIZE);
-            this.ctx.drawImage(this.edgeV, (GRID_SIZE * ART_SIZE) - EDGE_WIDTH, y * ART_SIZE);
+            this.ctx.drawImage(this.edgeV, (this.gridSize * ART_SIZE) - EDGE_WIDTH, y * ART_SIZE);
         }
+    }
+
+    #isCenterPosition(x: number, y: number): boolean {
+        const centerStart = this.gridSize / 2 - 1;
+        return x >= centerStart && x <= centerStart + 1 &&
+            y >= centerStart && y <= centerStart + 1;
+    }
+
+    #getCenterWalls(): IWall[] {
+        const centerStart = this.gridSize / 2 - 1;
+        const centerEnd = centerStart + 1;
+        return [
+            { from: { x: centerStart - 1, y: centerStart }, to: { x: centerStart, y: centerStart } },
+            { from: { x: centerStart - 1, y: centerEnd }, to: { x: centerStart, y: centerEnd } },
+            { from: { x: centerStart, y: centerStart - 1 }, to: { x: centerStart, y: centerStart } },
+            { from: { x: centerEnd, y: centerStart - 1 }, to: { x: centerEnd, y: centerStart } },
+            { from: { x: centerEnd, y: centerStart }, to: { x: centerEnd + 1, y: centerStart } },
+            { from: { x: centerEnd, y: centerEnd }, to: { x: centerEnd + 1, y: centerEnd } },
+            { from: { x: centerStart, y: centerEnd }, to: { x: centerStart, y: centerEnd + 1 } },
+            { from: { x: centerEnd, y: centerEnd }, to: { x: centerEnd, y: centerEnd + 1 } },
+        ];
     }
     #drawWalls() {
         for (const wall of this.walls) {
@@ -613,8 +635,8 @@ export class Board {
                 x: nextPosition.x + offset.x,
                 y: nextPosition.y + offset.y,
             };
-            if (candidate.x < 0 || candidate.x >= GRID_SIZE ||
-                candidate.y < 0 || candidate.y >= GRID_SIZE ||
+            if (candidate.x < 0 || candidate.x >= this.gridSize ||
+                candidate.y < 0 || candidate.y >= this.gridSize ||
                 this.#hasWallBetween(nextPosition, candidate) ||
                 this.robots.some(robot => {
                     const robotPosition = this.robotPositions[robot.id];
