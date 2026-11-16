@@ -2,6 +2,13 @@ import { Board } from "./board";
 import { board1 } from "./boards/board1";
 import { Game } from "./game";
 
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker
+            .register(`${import.meta.env.BASE_URL}sw.js`)
+            .catch(error => console.error('Service worker registration failed:', error));
+    });
+}
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d');

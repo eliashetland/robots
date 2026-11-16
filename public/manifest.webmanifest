@@ -1,0 +1,19 @@
+{
+  "name": "Robots",
+  "short_name": "Robots",
+  "description": "A tactical robot movement game.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0e263a",
+  "theme_color": "#0e263a",
+  "icons": [
+    {
+      "src": "./assets/hole-dark.png",
+      "sizes": "64x64",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
