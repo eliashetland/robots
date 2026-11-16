@@ -666,12 +666,17 @@ export class Board {
     #isCorrectRobotAtTarget(robotId: number): boolean {
         const robot = this.robots.find(candidate => candidate.id === robotId);
         const position = this.robotPositions[robotId];
+        if (this.#currentIconId === null) {
+            return false;
+        }
+        const activeIcon = this.#getIconAssetById(this.#currentIconId);
+        const isHoleTarget = activeIcon.type === 'hole';
         const target = this.targets.find(candidate =>
             candidate.position.x === position.x &&
             candidate.position.y === position.y &&
-            candidate.icon.color === robot?.color,
+            (isHoleTarget || candidate.icon.color === robot?.color),
         );
-        if (!target || this.#currentIconId === null) {
+        if (!target) {
             return false;
         }
         const targetAsset = this.#getIconAsset(target.icon.type, target.icon.color);
