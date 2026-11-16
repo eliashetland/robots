@@ -1,4 +1,4 @@
-const CACHE_NAME = 'robots-v2';
+const CACHE_NAME = 'robots-v3';
 const BASE_URL = self.registration.scope;
 
 self.addEventListener('install', event => {
